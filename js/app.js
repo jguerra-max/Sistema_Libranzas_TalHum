@@ -6,6 +6,8 @@
 // ==========================================
 // CONFIGURACIÓN POR DEFECTO
 // ==========================================
+const LOGO_INPEC_SRC = "assets/logo_inpec.png";
+
 const DEFAULT_CONFIG = {
   establecimiento: "CÁRCEL Y PENITENCIARIA DE MEDIA SEGURIDAD DE TUNJA",
   siglaSede: "CPMS Tunja",
@@ -857,12 +859,7 @@ function verDocumentoPDF(id) {
       <!-- ENCABEZADO OFICIAL -->
       <div>
         <div class="doc-header-logo">
-          <svg viewBox="0 0 100 100" width="55" height="55">
-            <path d="M50 5 L85 20 L85 55 C85 75 50 95 50 95 C50 95 15 75 15 55 L15 20 Z" fill="#1b365d" stroke="#0f2341" stroke-width="2"/>
-            <path d="M50 15 L75 27 L75 53 C75 68 50 83 50 83 C50 83 25 68 25 53 L25 27 Z" fill="#ffffff"/>
-            <path d="M42 35 H58 V42 H53 V65 H47 V42 H42 Z" fill="#1b365d"/>
-          </svg>
-          <div class="doc-inpec-logo-text">INPEC</div>
+          <img src="${LOGO_INPEC_SRC}" alt="Logo Oficial INPEC" style="max-height: 80px; width: auto; object-fit: contain; margin-bottom: 5px;">
         </div>
 
         <div class="doc-authority-title">
