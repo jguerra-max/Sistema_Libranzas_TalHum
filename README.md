@@ -93,3 +93,11 @@ Sistema_Libranzas_TalHum/
 ## 🔒 Confidencialidad y Privacidad
 
 El sistema opera bajo una arquitectura **local-first**: toda la información registrada reside de manera exclusiva en el almacenamiento local del equipo donde se utiliza. Ningún dato sensible o personal sale a servidores externos, garantizando el cumplimiento del principio de confidencialidad y la Ley Estatutaria 1581 de 2012 de Protección de Datos Personales.
+
+---
+
+## 👨‍💻 Autor
+
+### Julián Guerra - Estudiante de Ingeniería de Sistemas / Software Developer
+
+- GitHub: @jguerra-max
