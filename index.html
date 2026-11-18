@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Registro y Control de Libranzas - INPEC</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Librería de exportación a Excel offline -->
+  <script src="js/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <svg viewBox="0 0 100 100">
+        <path d="M50 5 L85 20 L85 55 C85 75 50 95 50 95 C50 95 15 75 15 55 L15 20 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+        <path d="M50 15 L75 27 L75 53 C75 68 50 83 50 83 C50 83 25 68 25 53 L25 27 Z" fill="#1b365d"/>
+        <path d="M42 35 H58 V42 H53 V65 H47 V42 H42 Z" fill="#ffffff"/>
+      </svg>
+      <div class="nav-titles">
+        <h1>SISTEMA DE CONTROL Y REGISTRO DE LIBRANZAS</h1>
+        <p>Gestión Humana • Control de Capacidad de Pago y Planilla Digital (Ley 1527 de 2012)</p>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <button class="btn btn-primary" onclick="abrirModalCertificacion()">
+        <span>➕</span> Crear Certificación
+      </button>
+      <button class="btn btn-success" onclick="exportarAExcel()" title="Exportar la lista actual a archivo Excel (.xlsx)">
+        <span>📊</span> Exportar a Excel
+      </button>
+      <button class="btn btn-outline-white" onclick="abrirModalConfiguracion()" title="Configuración de la Sede y Responsable">
+        <span>⚙️</span> Sede y Parámetros
+      </button>
+      <button class="btn btn-outline-white" onclick="abrirModalRespaldo()" title="Copia de seguridad y respaldo">
+        <span>💾</span> Respaldo
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="container">
+
+    <!-- TARJETAS DE ESTADÍSTICAS -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon icon-blue">📋</div>
+        <div class="stat-data">
+          <h3 id="statTotalCert">0</h3>
+          <p>Total Certificaciones</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-orange">⏳</div>
+        <div class="stat-data">
+          <h3 id="statEnTramite">0</h3>
+          <p>Libranzas en Trámite</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-green">✅</div>
+        <div class="stat-data">
+          <h3 id="statAutorizadas">0</h3>
+          <p>Libranzas Autorizadas</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-purple">💰</div>
+        <div class="stat-data">
+          <h3 id="statMontoLibranzas">$0</h3>
+          <p>Total Cuotas Mensuales</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL PRINCIPAL / BIBLIOTECA DE REGISTROS -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>📂</span> Biblioteca Consolidada de Certificaciones y Libranzas
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+          Planilla Digital Oficial • Directriz 2.2
+        </div>
+      </div>
+
+      <!-- BARRA DE FILTROS -->
+      <div class="filter-bar">
+        <div class="filter-group flex-1">
+          <label>Buscar Servidor / Cédula / Entidad / Folio:</label>
+          <input type="text" id="filterBusqueda" class="form-control" placeholder="Escriba para filtrar...">
+        </div>
+
+        <div class="filter-group">
+          <label>Fecha Inicial:</label>
+          <input type="date" id="filterFechaInicio" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>Fecha Final:</label>
+          <input type="date" id="filterFechaFin" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>Estado:</label>
+          <select id="filterEstado" class="form-control">
+            <option value="">Todos los estados</option>
+            <option value="En trámite">En trámite</option>
+            <option value="Autorizada">Autorizada</option>
+            <option value="Rechazada">Rechazada</option>
+            <option value="Finalizada">Finalizada</option>
+          </select>
+        </div>
+
+        <div class="filter-group" style="min-width: 100%;">
+          <label>Filtros Rápidos por Rango de Fechas:</label>
+          <div class="quick-filter-btns">
+            <button class="btn-tag" onclick="aplicarFiltroFechaRapido('mes')">Este Mes</button>
+            <button class="btn-tag" onclick="aplicarFiltroFechaRapido('sem1')">1er Semestre (Ene - Jun)</button>
+            <button class="btn-tag" onclick="aplicarFiltroFechaRapido('sem2')">2do Semestre (Jul - Dic)</button>
+            <button class="btn-tag" onclick="aplicarFiltroFechaRapido('ano')">Todo el Año</button>
+            <button class="btn-tag" onclick="aplicarFiltroFechaRapido('todos')">Ver Todo el Histórico</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLA DE REGISTROS -->
+      <div class="table-responsive">
+        <table class="table-records">
+          <thead>
+            <tr>
+              <th>Folio</th>
+              <th>Fecha</th>
+              <th>Servidor Solicitante</th>
+              <th>Cargo / Grado</th>
+              <th>Entidad Acreedora</th>
+              <th style="text-align: right;">Total Devengos</th>
+              <th style="text-align: right;">Total Descuentos</th>
+              <th style="text-align: right;">Monto Cuota</th>
+              <th style="text-align: right;">Capacidad Resultante</th>
+              <th>Estado</th>
+              <th style="text-align: center;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTableBody">
+            <!-- Filas dinámicas generadas en app.js -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================
+       MODAL: CREAR / MODIFICAR CERTIFICACIÓN
+       ========================================== -->
+  <div id="modalCertificacion" class="modal-overlay">
+    <div class="modal-container" style="max-width: 1050px;">
+      <div class="modal-header">
+        <h2 id="modalCertificacionTitle">📝 Nueva Certificación y Control de Libranza</h2>
+        <button class="btn-close" onclick="cerrarModal('modalCertificacion')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- SECCIÓN 1: DATOS DEL SERVIDOR PÚBLICO -->
+        <div class="form-section-title">
+          <span>1. Información del Servidor Público</span>
+          <small style="font-size: 0.75rem; color: var(--text-muted);">Soportado en Hoja de Vida</small>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>N° Folio / Registro:</label>
+            <input type="text" id="formFolio" class="form-control" placeholder="Ej: 001-2024">
+          </div>
+          <div class="form-group">
+            <label>Fecha de Expedición:</label>
+            <input type="date" id="formFecha" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Cédula de Ciudadanía (*):</label>
+            <input type="text" id="formCedula" class="form-control" placeholder="Ej: 7.335.196" oninput="recalcularFormularioEnVivo()">
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group" style="grid-column: span 2;">
+            <label>Nombres y Apellidos Completos (*):</label>
+            <input type="text" id="formNombres" class="form-control" placeholder="Ej: EDUAR ROLANDO AGUILAR BARAHONA">
+          </div>
+          <div class="form-group">
+            <label>Fecha de Ingreso al INPEC:</label>
+            <input type="date" id="formFechaIngreso" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Cargo Desempeñado:</label>
+            <input type="text" id="formCargo" class="form-control" placeholder="Ej: Dragoneante">
+          </div>
+          <div class="form-group">
+            <label>Código:</label>
+            <input type="text" id="formCodigo" class="form-control" placeholder="Ej: 4114">
+          </div>
+          <div class="form-group">
+            <label>Grado:</label>
+            <input type="text" id="formGrado" class="form-control" placeholder="Ej: 11">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Tipo de Vinculación:</label>
+            <input type="text" id="formTipoVinculacion" class="form-control" value="CARRERA ADMINISTRATIVA">
+          </div>
+          <div class="form-group">
+            <label>Establecimiento de Reclusión:</label>
+            <input type="text" id="formEstablecimiento" class="form-control">
+          </div>
+        </div>
+
+        <!-- SECCIÓN 2: INGRESOS Y DEVENGOS -->
+        <div class="form-section-title" style="margin-top: 1.5rem;">
+          <span>2. Discriminación de Ingresos (Devengos Mensuales)</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="agregarFilaConcepto('devengosTableBody')">
+            ➕ Agregar Devengo
+          </button>
+        </div>
+
+        <table class="concept-table">
+          <thead>
+            <tr>
+              <th>Concepto de Ingreso</th>
+              <th style="width: 170px; text-align: right;">Monto Mensual ($)</th>
+              <th style="width: 40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="devengosTableBody">
+            <!-- Filas dinámicas -->
+          </tbody>
+          <tfoot>
+            <tr class="concept-total-row">
+              <td style="padding: 8px 10px;">TOTAL INGRESOS (DEVENGOS)</td>
+              <td id="formTotalDevengosText" style="text-align: right; padding: 8px 10px; color: var(--primary); font-size: 0.95rem;">$0</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+        <div style="font-size: 0.76rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+          <strong>En letras para el documento:</strong> <span id="formDevengosLetras">Cero pesos M/L</span>
+        </div>
+
+        <!-- SECCIÓN 3: DEDUCCIONES Y DESCUENTOS -->
+        <div class="form-section-title">
+          <span>3. Descuentos y Deducciones Actuales (Desprendible de Pago)</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="agregarFilaConcepto('descuentosTableBody')">
+            ➕ Agregar Descuento
+          </button>
+        </div>
+
+        <table class="concept-table">
+          <thead>
+            <tr>
+              <th>Concepto de Descuento (Salud, Pensión, Sindicato, Libranzas Previas, etc.)</th>
+              <th style="width: 170px; text-align: right;">Monto Descuento ($)</th>
+              <th style="width: 40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="descuentosTableBody">
+            <!-- Filas dinámicas -->
+          </tbody>
+          <tfoot>
+            <tr class="concept-total-row">
+              <td style="padding: 8px 10px;">TOTAL DEDUCCIONES Y DESCUENTOS</td>
+              <td id="formTotalDescuentosText" style="text-align: right; padding: 8px 10px; color: var(--danger); font-size: 0.95rem;">$0</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- SECCIÓN 4: INFORMACIÓN DE LA NUEVA LIBRANZA SOLICITADA -->
+        <div class="form-section-title" style="margin-top: 1.5rem;">
+          <span>4. Datos de la Libranza Solicitada y Capacidad de Pago</span>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Entidad Acreedora (Banco / Cooperativa):</label>
+            <input type="text" id="formEntidadAcreedora" class="form-control" placeholder="Ej: COOPCENTRAL / BANCO AGRARIO">
+          </div>
+          <div class="form-group">
+            <label>Cuota Mensual Solicitada (*):</label>
+            <input type="number" id="formMontoCuota" class="form-control" style="font-weight: 700;" oninput="recalcularFormularioEnVivo()">
+          </div>
+          <div class="form-group">
+            <label>Plazo Estimado (Meses):</label>
+            <input type="number" id="formPlazoMeses" class="form-control" value="36">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Estado del Trámite:</label>
+            <select id="formEstado" class="form-control">
+              <option value="En trámite">En trámite</option>
+              <option value="Autorizada">Autorizada</option>
+              <option value="Rechazada">Rechazada</option>
+              <option value="Finalizada">Finalizada</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Observaciones de Gestión Humana:</label>
+            <input type="text" id="formObservaciones" class="form-control" placeholder="Anotaciones técnicas...">
+          </div>
+        </div>
+
+        <!-- ALERTA DE DUPLICIDAD (DIRECTRIZ 2.2) -->
+        <div id="alertDuplicidad" class="alert-warning-law" style="display: none;"></div>
+
+        <!-- PANEL DE ANÁLISIS TÉCNICO LEY 1527 DE 2012 -->
+        <div id="capacityAnalysisCard" class="capacity-card">
+          <div style="font-weight: 700; color: var(--primary); font-size: 0.9rem;">
+            📊 Certificación Técnica de Capacidad de Pago (Ley 1527 de 2012 / Directriz 2.2 INPEC)
+          </div>
+
+          <div class="capacity-grid">
+            <div class="cap-box">
+              <span>Devengos Netos (Base de Ley)</span>
+              <strong id="calcDevengosNetos">$0</strong>
+            </div>
+            <div class="cap-box">
+              <span>Límite Máximo Legal (50%)</span>
+              <strong id="calcCapacidad50">$0</strong>
+            </div>
+            <div class="cap-box">
+              <span>Capacidad Disponible Actual</span>
+              <strong id="calcCapacidadDisponible" style="color: #15803d;">$0</strong>
+            </div>
+            <div class="cap-box">
+              <span>Neto Final Resultante</span>
+              <strong id="calcNetoResultante">$0</strong>
+            </div>
+            <div class="cap-box">
+              <span>SMLMV Vigente Protegido</span>
+              <strong id="calcSMLMVRef" style="color: var(--text-secondary);">$0</strong>
+            </div>
+          </div>
+
+          <div id="capacityVerdictBox" class="cap-verdict success">
+            <!-- Veredicto dinámico -->
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modalCertificacion')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarFormularioCertificacion(false)">
+          💾 Guardar en Registro
+        </button>
+        <button type="button" class="btn btn-success" onclick="guardarFormularioCertificacion(true)">
+          📄 Guardar y Generar PDF Oficial
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: VISTA PREVIA Y FORMATO DE IMPRESIÓN PDF (PA-DO-G01-F02)
+       ========================================== -->
+  <div id="modalPDF" class="modal-overlay">
+    <div class="modal-container" style="max-width: 1000px; height: 95vh;">
+      <div class="modal-header no-print">
+        <h2>📄 Documento Oficial de Certificación (PA-DO-G01-F02)</h2>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary" onclick="imprimirDocumentoPDF()">
+            🖨️ Imprimir / Guardar como PDF
+          </button>
+          <button class="btn-close" onclick="cerrarModal('modalPDF')">&times;</button>
+        </div>
+      </div>
+
+      <div class="modal-body" style="padding: 0; background: #525659;">
+        <div class="sheet-preview-wrapper" id="pdfDocContainer">
+          <!-- Contenido del documento generado idéntico a la Imagen 2 -->
+        </div>
+      </div>
+
+      <div class="modal-footer no-print">
+        <button class="btn btn-outline" onclick="cerrarModal('modalPDF')">Cerrar</button>
+        <button class="btn btn-primary" onclick="imprimirDocumentoPDF()">
+          🖨️ Imprimir / Guardar como PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: AJUSTES DE SEDE Y PARÁMETROS
+       ========================================== -->
+  <div id="modalConfiguracion" class="modal-overlay">
+    <div class="modal-container" style="max-width: 700px;">
+      <div class="modal-header">
+        <h2>⚙️ Configuración de Sede y Parámetros Institucionales</h2>
+        <button class="btn-close" onclick="cerrarModal('modalConfiguracion')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+          Personalice el establecimiento, el funcionario firmante de Gestión Humana y los parámetros legales sin tocar código.
+        </p>
+
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label>Nombre del Establecimiento de Reclusión:</label>
+          <input type="text" id="cfgEstablecimiento" class="form-control">
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Sigla / Nombre Corto Sede:</label>
+            <input type="text" id="cfgSiglaSede" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Ciudad y Departamento:</label>
+            <input type="text" id="cfgCiudad" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Nombre del Responsable que Firma:</label>
+            <input type="text" id="cfgResponsableNombre" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Cargo del Responsable:</label>
+            <input type="text" id="cfgResponsableCargo" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label>Área / Dependencia Firmante:</label>
+          <input type="text" id="cfgResponsableArea" class="form-control">
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Dirección Sede:</label>
+            <input type="text" id="cfgDireccion" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Conmutador / Teléfono:</label>
+            <input type="text" id="cfgConmutador" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Correo Electrónico:</label>
+            <input type="email" id="cfgEmail" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-grid-2" style="margin-top: 0.75rem;">
+          <div class="form-group">
+            <label>Código Formato Oficial:</label>
+            <input type="text" id="cfgCodigoFormato" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Salario Mínimo Legal Vigente (SMLMV $):</label>
+            <input type="number" id="cfgSMLMV" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModal('modalConfiguracion')">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarModalConfiguracion()">Guardar Parámetros</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: RESPALDO Y RESTAURACIÓN
+       ========================================== -->
+  <div id="modalRespaldo" class="modal-overlay">
+    <div class="modal-container" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>💾 Respaldo y Copia de Seguridad</h2>
+        <button class="btn-close" onclick="cerrarModal('modalRespaldo')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+          Como este sistema es 100% portátil y autónomo, puedes descargar tu base de datos en cualquier momento para trasladarla a otro computador o guardarla como respaldo seguro.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong style="display: block;">Descargar Copia de Seguridad</strong>
+              <small style="color: var(--text-muted);">Guarda todos los registros y configuración en un archivo JSON.</small>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="descargarBackupJSON()">
+              📥 Descargar Backup
+            </button>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
+            <strong style="display: block; margin-bottom: 4px;">Restaurar Copia de Seguridad</strong>
+            <small style="color: var(--text-muted); display: block; margin-bottom: 8px;">Cargue un archivo previamente descargado para recuperar sus datos.</small>
+            <input type="file" id="inputImportBackup" accept=".json" onchange="importarBackupJSON(event)" class="form-control">
+          </div>
+
+          <div style="margin-top: 10px; text-align: right;">
+            <button class="btn btn-outline btn-sm" onclick="restablecerDatosDemo()">
+              🔄 Recargar Datos de Demostración
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="cerrarModal('modalRespaldo')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
