@@ -55,11 +55,13 @@
    * Ingrese las deducciones en la sección 3 (salud, pensión, cooperativas, sindicatos, etc.).
    * Ingrese la entidad acreedora y la cuota solicitada.
    * Observe el panel técnico de la Ley 1527: el sistema le indicará si es **APTO** o **NO APTO**.
+   * *(Opcional)* En la **Sección 5**, revise o edite los párrafos redactados del documento PDF (constancia de hoja de vida, vinculación, total de devengos o frase de expedición).
    * Haga clic en `💾 Guardar en Registro` o `📄 Guardar y Generar PDF Oficial`.
 
-3. **Imprimir o Guardar en PDF:**
+3. **Imprimir o Guardar en PDF (con edición en vivo):**
    * En la tabla de registros, presione el botón `📄 PDF` del funcionario.
-   * Se abrirá la vista previa del formato oficial. Presione `🖨️ Imprimir / Guardar como PDF` para descargarlo o enviarlo a la impresora.
+   * Se abrirá la vista previa del formato oficial. Puedes incluso hacer **clic directo sobre cualquier párrafo en la misma hoja** para realizar retoques rápidos de última hora.
+   * Presione `🖨️ Imprimir / Guardar como PDF` para descargarlo o imprimirlo.
 
 4. **Filtrar y Exportar a Excel:**
    * Use los filtros de fecha (ej. seleccione *1er Semestre* o elija rango entre enero y junio).

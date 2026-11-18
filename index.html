@@ -186,37 +186,37 @@
         <div class="form-grid-3">
           <div class="form-group" style="grid-column: span 2;">
             <label>Nombres y Apellidos Completos (*):</label>
-            <input type="text" id="formNombres" class="form-control" placeholder="Ej: EDUAR ROLANDO AGUILAR BARAHONA">
+            <input type="text" id="formNombres" class="form-control" placeholder="Ej: EDUAR ROLANDO AGUILAR BARAHONA" oninput="recalcularFormularioEnVivo()">
           </div>
           <div class="form-group">
             <label>Fecha de Ingreso al INPEC:</label>
-            <input type="date" id="formFechaIngreso" class="form-control">
+            <input type="date" id="formFechaIngreso" class="form-control" onchange="recalcularFormularioEnVivo()">
           </div>
         </div>
 
         <div class="form-grid-3">
           <div class="form-group">
             <label>Cargo Desempeñado:</label>
-            <input type="text" id="formCargo" class="form-control" placeholder="Ej: Dragoneante">
+            <input type="text" id="formCargo" class="form-control" placeholder="Ej: Dragoneante" oninput="recalcularFormularioEnVivo()">
           </div>
           <div class="form-group">
             <label>Código:</label>
-            <input type="text" id="formCodigo" class="form-control" placeholder="Ej: 4114">
+            <input type="text" id="formCodigo" class="form-control" placeholder="Ej: 4114" oninput="recalcularFormularioEnVivo()">
           </div>
           <div class="form-group">
             <label>Grado:</label>
-            <input type="text" id="formGrado" class="form-control" placeholder="Ej: 11">
+            <input type="text" id="formGrado" class="form-control" placeholder="Ej: 11" oninput="recalcularFormularioEnVivo()">
           </div>
         </div>
 
         <div class="form-grid-2">
           <div class="form-group">
             <label>Tipo de Vinculación:</label>
-            <input type="text" id="formTipoVinculacion" class="form-control" value="CARRERA ADMINISTRATIVA">
+            <input type="text" id="formTipoVinculacion" class="form-control" value="CARRERA ADMINISTRATIVA" oninput="recalcularFormularioEnVivo()">
           </div>
           <div class="form-group">
             <label>Establecimiento de Reclusión:</label>
-            <input type="text" id="formEstablecimiento" class="form-control">
+            <input type="text" id="formEstablecimiento" class="form-control" oninput="recalcularFormularioEnVivo()">
           </div>
         </div>
 
@@ -315,6 +315,40 @@
           </div>
         </div>
 
+        <!-- SECCIÓN 5: PERSONALIZACIÓN DE TEXTOS PARA EL DOCUMENTO OFICIAL (PDF) -->
+        <div class="form-section-title" style="margin-top: 1.5rem;">
+          <span>5. Textos Redactados para la Certificación PDF Oficial</span>
+          <button type="button" class="btn btn-outline btn-sm" onclick="regenerarTextosPDF(true)" title="Restablecer los textos generados automáticamente según los datos">
+            🔄 Restablecer Textos Automáticos
+          </button>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 1.25rem;">
+          <p style="font-size: 0.77rem; color: var(--text-secondary); margin-bottom: 10px;">
+            ℹ️ Los siguientes textos son los que se imprimirán en el documento oficial. Aparecen con la redacción institucional por defecto, pero puedes editarlos directamente si necesitas cambiar o complementar cualquier frase:
+          </p>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label style="font-weight: 600; font-size: 0.78rem;">Párrafo 1 (Constancia en Hoja de Vida - después de "HACE CONSTAR"):</label>
+            <textarea id="formTextoConstancia" class="form-control" rows="2" style="font-size: 0.83rem;" oninput="this.dataset.editadoManualmente='true'"></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label style="font-weight: 600; font-size: 0.78rem;">Párrafo 2 (Identificación del Servidor y Vinculación):</label>
+            <textarea id="formTextoServidor" class="form-control" rows="3" style="font-size: 0.83rem;" oninput="this.dataset.editadoManualmente='true'"></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label style="font-weight: 600; font-size: 0.78rem;">Párrafo 3 (Cargo y Total de Ingresos Devengados):</label>
+            <textarea id="formTextoCargoIngresos" class="form-control" rows="3" style="font-size: 0.83rem;" oninput="this.dataset.editadoManualmente='true'"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight: 600; font-size: 0.78rem;">Párrafo 4 (Lugar, Fecha de Expedición y Destino / Observaciones):</label>
+            <textarea id="formTextoFechaExpedicion" class="form-control" rows="2" style="font-size: 0.83rem;" oninput="this.dataset.editadoManualmente='true'"></textarea>
+          </div>
+        </div>
+
         <!-- ALERTA DE DUPLICIDAD (DIRECTRIZ 2.2) -->
         <div id="alertDuplicidad" class="alert-warning-law" style="display: none;"></div>
 
@@ -381,7 +415,11 @@
         </div>
       </div>
 
-      <div class="modal-body" style="padding: 0; background: #525659;">
+      <div class="modal-body" style="padding: 0; background: #525659; display: flex; flex-direction: column;">
+        <div class="no-print" style="background: #e0f2fe; color: #0369a1; padding: 8px 16px; font-size: 0.78rem; border-bottom: 1px solid #bae6fd; display: flex; align-items: center; justify-content: space-between;">
+          <span>✏️ <strong>Edición rápida:</strong> Puedes hacer clic sobre cualquier texto directamente en la hoja para modificarlo o corregirlo antes de imprimir.</span>
+          <span style="font-size: 0.74rem; color: #0284c7;">Tamaño Carta • Código PA-DO-G01-F02</span>
+        </div>
         <div class="sheet-preview-wrapper" id="pdfDocContainer">
           <!-- Contenido del documento generado idéntico a la Imagen 2 -->
         </div>

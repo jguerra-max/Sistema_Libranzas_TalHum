@@ -550,6 +550,64 @@ function aplicarFiltroFechaRapido(tipo) {
 }
 
 // ==========================================
+// GENERACIÓN Y EDICIÓN DE TEXTOS OFICIALES PARA PDF
+// ==========================================
+function generarTextosPredeterminados() {
+  const nombres = (document.getElementById("formNombres") ? document.getElementById("formNombres").value.trim().toUpperCase() : "") || "EL SERVIDOR PÚBLICO";
+  const cedula = (document.getElementById("formCedula") ? document.getElementById("formCedula").value.trim() : "") || "0.000.000";
+  const fechaIngreso = document.getElementById("formFechaIngreso") ? document.getElementById("formFechaIngreso").value : "";
+  const tipoVinculacion = (document.getElementById("formTipoVinculacion") ? document.getElementById("formTipoVinculacion").value.trim() : "") || "CARRERA ADMINISTRATIVA";
+  const cargo = (document.getElementById("formCargo") ? document.getElementById("formCargo").value.trim() : "") || "Dragoneante";
+  const codigo = (document.getElementById("formCodigo") ? document.getElementById("formCodigo").value.trim() : "") || "4114";
+  const grado = (document.getElementById("formGrado") ? document.getElementById("formGrado").value.trim() : "") || "11";
+  const establecimiento = (document.getElementById("formEstablecimiento") ? document.getElementById("formEstablecimiento").value.trim() : "") || appConfig.establecimiento;
+  const fechaExp = document.getElementById("formFecha") ? document.getElementById("formFecha").value : "";
+
+  // Formato formal fecha de ingreso
+  let fechaIngresoTexto = fechaIngreso || "fecha de posesión";
+  if (fechaIngreso && fechaIngreso.includes("-")) {
+    const p = fechaIngreso.split('-');
+    const a = parseInt(p[0], 10);
+    const m = parseInt(p[1], 10) - 1;
+    const d = parseInt(p[2], 10);
+    fechaIngresoTexto = `${d} de ${MESES[m] || ''} de ${a}`;
+  }
+
+  // Calcular total de devengos actuales
+  const devengos = obtenerConceptosDeTabla("devengosTableBody");
+  const totalDev = devengos.reduce((acc, item) => acc + (Number(item.valor) || 0), 0);
+  const devengosEnLetras = numeroALetras(totalDev);
+
+  return {
+    textoConstancia: "Que la información inscrita en esta certificación se encuentra soportada por la documentación existente en la Hoja de Vida.",
+    textoServidor: `El señor ${nombres}, quien se identifica con la cédula de ciudadanía No. ${cedula}, labora en el Instituto Nacional Penitenciario y Carcelario INPEC, desde el ${fechaIngresoTexto}, con vinculación en ${tipoVinculacion}.`,
+    textoCargoIngresos: `Actualmente desempeña el cargo de ${cargo} de la ${establecimiento} Código ${codigo} Grado ${grado}, devengando un total de ingresos de ${devengosEnLetras} pesos M/L ($${formatoNumero(totalDev)}), discriminados así:`,
+    textoFechaExpedicion: fechaATextoFormal(fechaExp, appConfig.ciudad)
+  };
+}
+
+function regenerarTextosPDF(forzar = false) {
+  const defaults = generarTextosPredeterminados();
+  const elConst = document.getElementById("formTextoConstancia");
+  const elServ = document.getElementById("formTextoServidor");
+  const elCargo = document.getElementById("formTextoCargoIngresos");
+  const elFecha = document.getElementById("formTextoFechaExpedicion");
+
+  if (forzar) {
+    if (elConst) { elConst.value = defaults.textoConstancia; delete elConst.dataset.editadoManualmente; }
+    if (elServ) { elServ.value = defaults.textoServidor; delete elServ.dataset.editadoManualmente; }
+    if (elCargo) { elCargo.value = defaults.textoCargoIngresos; delete elCargo.dataset.editadoManualmente; }
+    if (elFecha) { elFecha.value = defaults.textoFechaExpedicion; delete elFecha.dataset.editadoManualmente; }
+    return;
+  }
+
+  if (elConst && (!elConst.value.trim() || !elConst.dataset.editadoManualmente)) elConst.value = defaults.textoConstancia;
+  if (elServ && (!elServ.value.trim() || !elServ.dataset.editadoManualmente)) elServ.value = defaults.textoServidor;
+  if (elCargo && (!elCargo.value.trim() || !elCargo.dataset.editadoManualmente)) elCargo.value = defaults.textoCargoIngresos;
+  if (elFecha && (!elFecha.value.trim() || !elFecha.dataset.editadoManualmente)) elFecha.value = defaults.textoFechaExpedicion;
+}
+
+// ==========================================
 // GESTIÓN DEL FORMULARIO DE CERTIFICACIÓN
 // ==========================================
 function abrirModalCertificacion(id = null) {
@@ -606,6 +664,9 @@ function limpiarFormularioNuevo() {
   document.getElementById("formPlazoMeses").value = 36;
   document.getElementById("formEstado").value = "En trámite";
   document.getElementById("formObservaciones").value = "";
+
+  // Cargar textos por defecto para la certificación PDF
+  regenerarTextosPDF(true);
 }
 
 function cargarFormularioConRegistro(rec) {
@@ -628,6 +689,16 @@ function cargarFormularioConRegistro(rec) {
   document.getElementById("formPlazoMeses").value = rec.libranza.plazoMeses || 12;
   document.getElementById("formEstado").value = rec.libranza.estado || "En trámite";
   document.getElementById("formObservaciones").value = rec.libranza.observaciones || "";
+
+  // Cargar textos personalizados si existen, o generarlos
+  if (rec.textosPersonalizados) {
+    document.getElementById("formTextoConstancia").value = rec.textosPersonalizados.textoConstancia || "";
+    document.getElementById("formTextoServidor").value = rec.textosPersonalizados.textoServidor || "";
+    document.getElementById("formTextoCargoIngresos").value = rec.textosPersonalizados.textoCargoIngresos || "";
+    document.getElementById("formTextoFechaExpedicion").value = rec.textosPersonalizados.textoFechaExpedicion || "";
+  } else {
+    regenerarTextosPDF(true);
+  }
 }
 
 function renderizarFilasConceptos(tbodyId, lista, tipo) {
@@ -722,6 +793,9 @@ function recalcularFormularioEnVivo() {
     alertDuplicidad.style.display = "none";
   }
 
+  // Actualizar textos automáticos del PDF si no han sido editados a mano
+  regenerarTextosPDF(false);
+
   if (resultado.aprobado) {
     cardCap.className = "capacity-card passed";
     verdictBox.className = "cap-verdict success";
@@ -770,6 +844,14 @@ function guardarFormularioCertificacion(generarPdfInmediato = false) {
 
   const calculos = calcularCapacidadTecnica(devengos, descuentos, montoCuota, cedula, editingRecordId);
 
+  // Capturar textos personalizados para el documento PDF
+  const textosPersonalizados = {
+    textoConstancia: document.getElementById("formTextoConstancia") ? document.getElementById("formTextoConstancia").value.trim() : "",
+    textoServidor: document.getElementById("formTextoServidor") ? document.getElementById("formTextoServidor").value.trim() : "",
+    textoCargoIngresos: document.getElementById("formTextoCargoIngresos") ? document.getElementById("formTextoCargoIngresos").value.trim() : "",
+    textoFechaExpedicion: document.getElementById("formTextoFechaExpedicion") ? document.getElementById("formTextoFechaExpedicion").value.trim() : ""
+  };
+
   const nuevoRegistro = {
     id: editingRecordId || ("REC-" + Date.now()),
     folio: folio || ("FOL-" + Date.now().toString().slice(-4)),
@@ -793,7 +875,8 @@ function guardarFormularioCertificacion(generarPdfInmediato = false) {
       estado,
       observaciones
     },
-    calculos
+    calculos,
+    textosPersonalizados
   };
 
   if (editingRecordId) {
@@ -828,13 +911,21 @@ function editarRegistro(id) {
 // VISTA PREVIA Y FORMATO DE IMPRESIÓN (PDF)
 // EXACTO A LA IMAGEN 2 (PA-DO-G01-F02)
 // ==========================================
+function guardarEdicionEnVivoDoc(id, campo, nuevoTexto) {
+  const rec = records.find(r => r.id === id);
+  if (!rec) return;
+  if (!rec.textosPersonalizados) rec.textosPersonalizados = {};
+  rec.textosPersonalizados[campo] = nuevoTexto.trim();
+  localStorage.setItem("libranzas_inpec_records", JSON.stringify(records));
+}
+
 function verDocumentoPDF(id) {
   const rec = records.find(r => r.id === id);
   if (!rec) return;
 
   const totalDevengos = rec.calculos.totalDevengos;
   const devengosEnLetras = numeroALetras(totalDevengos);
-  const textoFechaExpedicion = fechaATextoFormal(rec.fecha, appConfig.ciudad);
+  const textoFechaExpedicionDefecto = fechaATextoFormal(rec.fecha, appConfig.ciudad);
 
   // Formato de fecha de ingreso formal
   let fechaIngresoTexto = rec.servidor.fechaIngreso || "";
@@ -845,6 +936,23 @@ function verDocumentoPDF(id) {
     const d = parseInt(p[2], 10);
     fechaIngresoTexto = `${d} de ${MESES[m] || ''} de ${a}`;
   }
+
+  // Textos finales: personalizados si existen, o por defecto
+  const pConstancia = (rec.textosPersonalizados && rec.textosPersonalizados.textoConstancia)
+    ? rec.textosPersonalizados.textoConstancia
+    : "Que la información inscrita en esta certificación se encuentra soportada por la documentación existente en la Hoja de Vida.";
+
+  const pServidor = (rec.textosPersonalizados && rec.textosPersonalizados.textoServidor)
+    ? rec.textosPersonalizados.textoServidor
+    : `El señor <strong>${rec.servidor.nombres}</strong>, quien se identifica con la cédula de ciudadanía No. <strong>${rec.servidor.cedula}</strong>, labora en el Instituto Nacional Penitenciario y Carcelario INPEC, desde el <strong>${fechaIngresoTexto}</strong>, con vinculación en <strong>${rec.servidor.tipoVinculacion}</strong>.`;
+
+  const pCargoIngresos = (rec.textosPersonalizados && rec.textosPersonalizados.textoCargoIngresos)
+    ? rec.textosPersonalizados.textoCargoIngresos
+    : `Actualmente desempeña el cargo de <strong>${rec.servidor.cargo}</strong> Código <strong>${rec.servidor.codigo}</strong> Grado <strong>${rec.servidor.grado}</strong>, devengando un total de ingresos de <strong>${devengosEnLetras} pesos M/L ($${formatoNumero(totalDevengos)})</strong>, discriminados así:`;
+
+  const pFecha = (rec.textosPersonalizados && rec.textosPersonalizados.textoFechaExpedicion)
+    ? rec.textosPersonalizados.textoFechaExpedicion
+    : textoFechaExpedicionDefecto;
 
   // Generar filas de ingresos para el documento
   const filasDevengosHtml = rec.devengos.map(item => `
@@ -870,16 +978,16 @@ function verDocumentoPDF(id) {
           HACE CONSTAR
         </div>
 
-        <p class="doc-p">
-          Que la información inscrita en esta certificación se encuentra soportada por la documentación existente en la Hoja de Vida.
+        <p class="doc-p doc-editable" contenteditable="true" title="Clic para editar este párrafo" onblur="guardarEdicionEnVivoDoc('${rec.id}', 'textoConstancia', this.innerText)">
+          ${pConstancia}
         </p>
 
-        <p class="doc-p">
-          El señor <strong>${rec.servidor.nombres}</strong>, quien se identifica con la cédula de ciudadanía No. <strong>${rec.servidor.cedula}</strong>, labora en el Instituto Nacional Penitenciario y Carcelario INPEC, desde el <strong>${fechaIngresoTexto}</strong>, con vinculación en <strong>${rec.servidor.tipoVinculacion}</strong>.
+        <p class="doc-p doc-editable" contenteditable="true" title="Clic para editar este párrafo" onblur="guardarEdicionEnVivoDoc('${rec.id}', 'textoServidor', this.innerHTML)">
+          ${pServidor}
         </p>
 
-        <p class="doc-p">
-          Actualmente desempeña el cargo de <strong>${rec.servidor.cargo}</strong> Código <strong>${rec.servidor.codigo}</strong> Grado <strong>${rec.servidor.grado}</strong>, devengando un total de ingresos de <strong>${devengosEnLetras} pesos M/L ($${formatoNumero(totalDevengos)})</strong>, discriminados así:
+        <p class="doc-p doc-editable" contenteditable="true" title="Clic para editar este párrafo" onblur="guardarEdicionEnVivoDoc('${rec.id}', 'textoCargoIngresos', this.innerHTML)">
+          ${pCargoIngresos}
         </p>
 
         <table class="doc-income-table">
@@ -892,8 +1000,8 @@ function verDocumentoPDF(id) {
           </tbody>
         </table>
 
-        <p class="doc-date-exp">
-          ${textoFechaExpedicion}
+        <p class="doc-date-exp doc-editable" contenteditable="true" title="Clic para editar fecha o destino" onblur="guardarEdicionEnVivoDoc('${rec.id}', 'textoFechaExpedicion', this.innerText)">
+          ${pFecha}
         </p>
       </div>
 
